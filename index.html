@@ -3,7 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base64 编码解码工具</title>
+    <title>Base64 在线编码解码</title>
+	<!-- SEO Meta Tags -->
+    <meta name="description" content="Base64在线编码解码工具，文本转换为Base64编码；编解码Base64字符串，将文件编码为Base64格式。">
+    <meta name="keywords" content="base64, 编码, 解码, base64编码, base64解码, base64加密, base64解密, 在线工具, 文本转换器, 文件转base64">
+    <meta name="author" content="Base64.Fun">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Multilingual SEO -->
+    <link rel="alternate" hreflang="zh-Hans" href="https://base64.fun/">
+    <link rel="alternate" hreflang="x-default" href="https://base64.fun/">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Base64.Fun - Base64在线编码解码工具">
+    <meta property="og:description" content="Base64在线编码解码工具，文本转换为Base64编码；编解码Base64字符串，将文件编码为Base64格式。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://base64.fun/">
+    <meta property="og:site_name" content="Base64.Fun">
+	
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -615,8 +632,7 @@ $urlSafe = rtrim($urlSafe, '=');</code></pre>
             const tabHeaders = document.querySelectorAll('.tab-header');
             const languageTabs = document.querySelectorAll('.language-tab');
             const codeSections = document.querySelectorAll('.code-section');
-            
-            // 初始化：默认只显示JavaScript代码示例
+
             switchLanguage('javascript');
             
             function updateStats() {
