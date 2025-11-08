@@ -667,81 +667,166 @@ $urlSafe = rtrim($urlSafe, '=');</code></pre>
                 }
             }
             
-            function decodeBase64() {
-                try {
-                    let base64String = inputText.value;
-                    const dataUrlMatch = base64String.match(/^data:.+?;base64,(.+)$/);
-                    if (dataUrlMatch) {
-                        base64String = dataUrlMatch[1];
-                    }
-                    
-                    const originalLength = base64String.length;
-                    
-                    if (filterCheckbox.checked) {
-                        const beforeFilterLength = base64String.length;
-                        base64String = filterNonBase64Chars(base64String);
-                        const afterFilterLength = base64String.length;
-                        filteredChars.textContent = beforeFilterLength - afterFilterLength;
-                    } else {
-                        base64String = base64String.replace(/\s/g, '');
-                        filteredChars.textContent = originalLength - base64String.length;
-                    }
-                    
-                    if (base64String.length === 0) {
-                        outputText.value = '';
-                        statusEl.textContent = '输入为空或过滤后无有效Base64字符';
-                        statusEl.style.color = '#ff9800';
-                        decodedLength.textContent = '0';
-                        updateStats();
-                        return;
-                    }
-                    
-                    try {
-                        const decoded = decodeURIComponent(escape(atob(base64String)));
-                        outputText.value = decoded;
-                        statusEl.textContent = '解码成功';
-                        statusEl.style.color = '#4caf50';
-                        decodedLength.textContent = base64String.length;
-                        updateStats();
-                        return;
-                    } catch (fullError) {
-                        let successfullyDecoded = '';
-                        let lastValidIndex = 0;
-                        
-                        for (let i = 4; i <= base64String.length; i += 4) {
-                            try {
-                                const segment = base64String.substring(0, i);
-                                const decodedSegment = decodeURIComponent(escape(atob(segment)));
-                                successfullyDecoded = decodedSegment;
-                                lastValidIndex = i;
-                            } catch (segmentError) {
-                                break;
-                            }
-                        }
-                        
-                        if (lastValidIndex > 0) {
-                            outputText.value = successfullyDecoded;
-                            statusEl.textContent = `部分解码成功 (${lastValidIndex}/${base64String.length} 字符)`;
-                            statusEl.style.color = '#ff9800';
-                            decodedLength.textContent = lastValidIndex;
-                        } else {
-                            outputText.value = '解码错误：无效的Base64字符串';
-                            statusEl.textContent = '解码失败';
-                            statusEl.style.color = '#f44336';
-                            decodedLength.textContent = '0';
-                        }
-                        
-                        updateStats();
-                    }
-                } catch (error) {
-                    outputText.value = '解码错误：处理过程中发生异常';
-                    statusEl.textContent = '解码失败';
-                    statusEl.style.color = '#f44336';
-                    decodedLength.textContent = '0';
-                    filteredChars.textContent = '0';
-                    updateStats();
-                }
-            }
+			function decodeBase64() {
+				try {
+					let base64String = inputText.value;
+					const dataUrlMatch = base64String.match(/^data:.+?;base64,(.+)$/);
+					if (dataUrlMatch) {
+						base64String = dataUrlMatch[1];
+					}
+					
+					const originalLength = base64String.length;
+
+					const hasNewlines = base64String.includes('\n') || base64String.includes('\r');
+
+					if (hasNewlines) {
+						const lines = base64String.split(/\r?\n/);
+						let decodedLines = [];
+						let totalDecodedLength = 0;
+						let successfulLines = 0;
+						let failedLines = 0;
+						let totalFilteredChars = 0;
+						
+						for (let i = 0; i < lines.length; i++) {
+							let line = lines[i].trim();
+							if (line.length === 0) {
+								decodedLines.push('');
+								continue;
+							}
+							
+							const originalLineLength = line.length;
+
+							if (filterCheckbox.checked) {
+								const beforeFilterLength = line.length;
+								line = filterNonBase64Chars(line);
+								const afterFilterLength = line.length;
+								totalFilteredChars += (beforeFilterLength - afterFilterLength);
+							} else {
+								line = line.replace(/\s/g, '');
+								totalFilteredChars += (originalLineLength - line.length);
+							}
+							
+							if (line.length === 0) {
+								decodedLines.push(`[第${i+1}行过滤后为空]`);
+								failedLines++;
+								continue;
+							}
+							
+							try {
+								const decoded = decodeURIComponent(escape(atob(line)));
+								decodedLines.push(decoded);
+								totalDecodedLength += line.length;
+								successfulLines++;
+							} catch (error) {
+								let successfullyDecoded = '';
+								let lastValidIndex = 0;
+								
+								for (let j = 4; j <= line.length; j += 4) {
+									try {
+										const segment = line.substring(0, j);
+										const decodedSegment = decodeURIComponent(escape(atob(segment)));
+										successfullyDecoded = decodedSegment;
+										lastValidIndex = j;
+									} catch (segmentError) {
+										break;
+									}
+								}
+								
+								if (lastValidIndex > 0) {
+									decodedLines.push(successfullyDecoded);
+									totalDecodedLength += lastValidIndex;
+									successfulLines++;
+								} else {
+									decodedLines.push(`[第${i+1}行解码失败: ${error.message}]`);
+									failedLines++;
+								}
+							}
+						}
+						
+						outputText.value = decodedLines.join('\n');
+						filteredChars.textContent = totalFilteredChars;
+						
+						if (failedLines === 0) {
+							statusEl.textContent = `按行解码成功 (${successfulLines}行)`;
+							statusEl.style.color = '#4caf50';
+						} else if (successfulLines > 0) {
+							statusEl.textContent = `部分行解码成功 (${successfulLines}行成功, ${failedLines}行失败)`;
+							statusEl.style.color = '#ff9800';
+						} else {
+							statusEl.textContent = '所有行解码失败';
+							statusEl.style.color = '#f44336';
+						}
+						
+						decodedLength.textContent = totalDecodedLength;
+						updateStats();
+						return;
+					}
+
+					if (filterCheckbox.checked) {
+						const beforeFilterLength = base64String.length;
+						base64String = filterNonBase64Chars(base64String);
+						const afterFilterLength = base64String.length;
+						filteredChars.textContent = beforeFilterLength - afterFilterLength;
+					} else {
+						base64String = base64String.replace(/\s/g, '');
+						filteredChars.textContent = originalLength - base64String.length;
+					}
+					
+					if (base64String.length === 0) {
+						outputText.value = '';
+						statusEl.textContent = '输入为空或过滤后无有效Base64字符';
+						statusEl.style.color = '#ff9800';
+						decodedLength.textContent = '0';
+						updateStats();
+						return;
+					}
+					
+					try {
+						const decoded = decodeURIComponent(escape(atob(base64String)));
+						outputText.value = decoded;
+						statusEl.textContent = '解码成功';
+						statusEl.style.color = '#4caf50';
+						decodedLength.textContent = base64String.length;
+						updateStats();
+						return;
+					} catch (fullError) {
+						let successfullyDecoded = '';
+						let lastValidIndex = 0;
+						
+						for (let i = 4; i <= base64String.length; i += 4) {
+							try {
+								const segment = base64String.substring(0, i);
+								const decodedSegment = decodeURIComponent(escape(atob(segment)));
+								successfullyDecoded = decodedSegment;
+								lastValidIndex = i;
+							} catch (segmentError) {
+								break;
+							}
+						}
+						
+						if (lastValidIndex > 0) {
+							outputText.value = successfullyDecoded;
+							statusEl.textContent = `部分解码成功 (${lastValidIndex}/${base64String.length} 字符)`;
+							statusEl.style.color = '#ff9800';
+							decodedLength.textContent = lastValidIndex;
+						} else {
+							outputText.value = '解码错误：无效的Base64字符串';
+							statusEl.textContent = '解码失败';
+							statusEl.style.color = '#f44336';
+							decodedLength.textContent = '0';
+						}
+						
+						updateStats();
+					}
+				} catch (error) {
+					outputText.value = '解码错误：处理过程中发生异常';
+					statusEl.textContent = '解码失败';
+					statusEl.style.color = '#f44336';
+					decodedLength.textContent = '0';
+					filteredChars.textContent = '0';
+					updateStats();
+				}
+			}
             
             function copyToClipboard() {
                 if (outputText.value) {
@@ -826,5 +911,3 @@ $urlSafe = rtrim($urlSafe, '=');</code></pre>
     </script>
 </body>
 </html>
-
-
